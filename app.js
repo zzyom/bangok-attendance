@@ -74,23 +74,14 @@ if (configured) {
 }
 
 /* ---------- 로그인 ---------- */
-let gateAdmin = false;
-function setGateMode(admin) {
-  gateAdmin = admin;
-  $('gateSub').textContent = admin ? '학년부장 비밀번호를 입력하세요.' : '선생님 공용 비밀번호를 입력하세요.';
-  $('gateMode').textContent = admin ? '선생님 비밀번호로 로그인' : '학년부장(관리자)으로 로그인';
-  $('gateErr').textContent = '';
-  $('gatePw').value = '';
-  $('gatePw').focus();
-}
-$('gateMode').addEventListener('click', () => setGateMode(!gateAdmin));
+$('gateSub').textContent = '공용 비밀번호를 입력하세요.';
 $('gateForm').addEventListener('submit', async e => {
   e.preventDefault();
   const pw = $('gatePw').value;
   if (!pw) { $('gateErr').textContent = '비밀번호를 입력해 주세요.'; return }
   $('gateBtn').disabled = true; $('gateErr').textContent = '';
   try {
-    await signInWithEmailAndPassword(auth, gateAdmin ? ACCOUNTS.admin : ACCOUNTS.teacher, pw);
+    await signInWithEmailAndPassword(auth, ACCOUNTS.admin, pw);
     $('gatePw').value = '';
   } catch (err) {
     const c = err && err.code;
@@ -127,7 +118,7 @@ function startData() {
 
 if (!configured) {
   $('gate').hidden = false;
-  $('gateForm').hidden = true; $('gateMode').hidden = true;
+  $('gateForm').hidden = true;
   $('gateSub').textContent = '아직 Firebase 설정이 비어 있어요. firebase-config.js에 프로젝트 값을 넣어 주세요.';
 } else {
   onAuthStateChanged(auth, user => {
@@ -137,11 +128,12 @@ if (!configured) {
     $('gate').hidden = !!user;
     $('app').hidden = !user;
     if (user) {
-      $('roleBadge').textContent = S.isAdmin ? '학년부장' : '선생님';
+      $('roleBadge').textContent = '관리자';
       startData();
       setTab(S.tab);
     } else {
-      setGateMode(false);
+      $('gateSub').textContent = '공용 비밀번호를 입력하세요.';
+      $('gatePw').value = '';
     }
   });
 }

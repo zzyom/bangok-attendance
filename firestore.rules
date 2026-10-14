@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Firebase 콘솔 > Firestore Database > 규칙 탭에 이 내용을 통째로 붙여 넣고 [게시]를 누르세요.
-// 이메일은 firebase-config.js의 ACCOUNTS와 같아야 합니다.
+// 공용 암호 계정은 모두 관리자 권한이며, 이메일은 화면에 노출되지 않는 내부 식별자입니다.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,27 +9,25 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn() && request.auth.token.email == 'admin@bangok-g2.example.com';
     }
-    function isTeacher() {
-      return signedIn() && (isAdmin() || request.auth.token.email == 'teacher@bangok-g2.example.com');
-    }
+    function isTeacher() { return isAdmin(); }
     function monthLocked(m) {
       let p = /databases/$(database)/documents/locks/$(string(m));
       return exists(p) && get(p).data.locked == true;
     }
 
-    // 학급별 명렬: 모두 읽기, 학년부장만 수정
+    // 공용 관리자 계정: 모든 사용자가 읽기·수정
     match /roster/{cls} {
       allow read: if isTeacher();
       allow write: if isAdmin();
     }
 
-    // 월 마감: 모두 읽기, 학년부장만 수정
+    // 월 마감: 공용 관리자 계정만 읽기·수정
     match /locks/{month} {
       allow read: if isTeacher();
       allow write: if isAdmin();
     }
 
-    // 학급×월 출결 기록: 문서 id는 "2-3_10" 형식
+    // 학급×월 출결 기록: 공용 관리자 계정만 접근, 문서 id는 "2-3_10" 형식
     match /records/{id} {
       allow read: if isTeacher();
       allow create, update: if isTeacher()
