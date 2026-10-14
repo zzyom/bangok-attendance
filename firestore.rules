@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Firebase 콘솔 > Firestore Database > 규칙 탭에 이 내용을 통째로 붙여 넣고 [게시]를 누르세요.
+// 이메일은 firebase-config.js의 ACCOUNTS와 같아야 합니다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && request.auth.token.email == 'admin@bangok-g2.example.com';
+    }
+    function isTeacher() {
+      return signedIn() && (isAdmin() || request.auth.token.email == 'teacher@bangok-g2.example.com');
+    }
+    function monthLocked(m) {
+      let p = /databases/$(database)/documents/locks/$(string(m));
+      return exists(p) && get(p).data.locked == true;
+    }
+
+    // 학급별 명렬: 모두 읽기, 학년부장만 수정
+    match /roster/{cls} {
+      allow read: if isTeacher();
+      allow write: if isAdmin();
+    }
+
+    // 월 마감: 모두 읽기, 학년부장만 수정
+    match /locks/{month} {
+      allow read: if isTeacher();
+      allow write: if isAdmin();
+    }
+
+    // 학급×월 출결 기록: 문서 id는 "2-3_10" 형식
+    match /records/{id} {
+      allow read: if isTeacher();
+      allow create, update: if isTeacher()
+        && request.resource.data.month is int
+        && request.resource.data.month >= 3 && request.resource.data.month <= 12
+        && id == request.resource.data.cls + '_' + string(request.resource.data.month)
+        && request.resource.data.rows is map
+        && request.resource.data.savedBy is string
+        && (isAdmin() || !monthLocked(request.resource.data.month));
+      allow delete: if isAdmin();
+    }
+  }
+}

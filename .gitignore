@@ -1,0 +1,6 @@
+# 학생 개인정보가 담긴 파일은 절대 올리지 않습니다
+*.json
+!package.json
+*.csv
+*.xlsx
+backup/
